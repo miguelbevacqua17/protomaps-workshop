@@ -1,34 +1,36 @@
 <html>
 
 <head>
-    <title>Protomaps - Hurricane Zones</title>
+    <title>Protomaps - Precipitacion</title>
     <meta charset="utf-8" />
+
+    <!-- MAPLIBRE -->
     <script src="https://unpkg.com/maplibre-gl@^5.2.0/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@^5.2.0/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/pmtiles@4.2.1/dist/pmtiles.js"></script>
-    <script src="https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js"></script>
-    <style>
-        body {
-            margin: 0;
-        }
 
-        #map {
-            height: 100%;
-            width: 100%;
-        }
+    <!-- PMTILES -->
+    <script src="https://unpkg.com/pmtiles@4.2.1/dist/pmtiles.js"></script>
+
+    <!-- PROTOMAPS BASEMAPS -->
+    <script src="https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js"></script>
+
+    <style>
+        body { margin: 0; }
+        #map { height: 100%; width: 100%; }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
+
     <script type="text/javascript">
         let protocol = new pmtiles.Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
 
         const map = new maplibregl.Map({
             container: "map",
-            zoom: 10,
-            center: [-80.42, 25.65],
+            zoom: 4,
+            center: [-63, -35],  // Centro Argentina
             style: {
                 version: 8,
                 glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
@@ -37,89 +39,44 @@
                     basemap: {
                         type: "vector",
                         url: "pmtiles://./basemap-amba.pmtiles",
-                        attribution: "<a href='https://protomaps.com'>Protomaps</a> <a href='https://openstreetmap.org/copyright'>© OpenStreetMap Contributors</a>"
+                        attribution: "<a href='https://protomaps.com'>Protomaps</a>"
                     },
-                    other_source: {
+                    precipitacion: {
                         type: "geojson",
-                        data: "./precipitaciones.json"
+                        data: "./precipitacion.json"
                     }
                 },
                 layers: [
                     ...basemaps.layers("basemap", basemaps.namedFlavor("grayscale")),
+
                     {
-                        id: "other_layer",
-                        source: "other_source",
-                        type: "fill",
-                        'paint': {
-                            "fill-color": [
-                                "match",
-                                ["get", "ZONEID"],
-                                "A", "#7a0177",
-                                "B", "#c51b8a",
-                                "C", "#f768a1",
-                                "D", "#fa9fb5",
-                                "E", "#fcc5c0",
-                                "F", "#feebe2",
-                                "#eeeeee"        // default color if no match
-                            ],
-                            'fill-opacity': 0.6,
-                            'fill-outline-color': "rgba(0, 0, 0, 0)"
+                        id: "lluvia",
+                        source: "precipitacion",
+                        type: "circle",
+                        paint: {
+                            "circle-radius": 4,
+                            "circle-opacity": 0.8,
+                            "circle-color": [
+                                "interpolate",
+                                ["linear"],
+                                ["get", "PP_mm"],
+                                0, "#b3cde0",
+                                2, "#6497b1",
+                                5, "#005b96",
+                                10, "#03396c",
+                                20, "#011f4b"
+                            ]
                         }
                     },
-                    ...basemaps.layers("basemap", basemaps.namedFlavor("grayscale"), { lang: "en", labelsOnly: true })
+
+                    ...basemaps.layers("basemap", basemaps.namedFlavor("grayscale"), {
+                        labelsOnly: true,
+                    })
                 ]
             },
         });
 
-        // map.addControl add zoom buttons to the map (and others if you want).
-        map.addControl(new maplibregl.NavigationControl({
-            showZoom: true,
-            showCompass: false
-        }));
-
-        // map.fitBounds pre-zooms the map to fit the latitude/longitude boundaries
-        // of the parade route. Points are the southwest and northeast corners.
-        // Helpful for resizing to maps of different sizes! (Mobile or desktop)
-        map.fitBounds([
-            [-80.624896, 25.310222],
-            [-80.098577, 25.88083]
-        ], { padding: 20 });
-
-        // start of popup code ...
-
-        // Create a popup, but don't add it to the map yet.
-        const popup = new maplibregl.Popup({
-            closeButton: false,
-            closeOnClick: false
-        });
-
-        // if the cursor moves into "other_layer" do stuff!
-        map.on("mousemove", "other_layer", (e) => {
-            // Change the cursor style 
-            map.getCanvas().style.cursor = "pointer";
-
-            // Get mouse coordinates
-            const coordinates = e.lngLat;
-
-            // get the information from the zone at those coordinates
-            const zone = e.features[0].properties.ZONEID || "not needed";
-
-            // Make the popup text
-            const description = `<b>Zone ${zone}</b>`
-
-            // Populate the popup and set its coordinates
-            // based on the feature found.
-            popup.setLngLat(coordinates).setHTML(description).addTo(map);
-        });
-
-        // When we leave "other_layer," make the popup disappear
-        map.on("mouseleave", "other_layer", () => {
-            map.getCanvas().style.cursor = "";
-            popup.remove();
-        });
-
-        // ... end of popup code
-
+        map.addControl(new maplibregl.NavigationControl());
     </script>
 </body>
 
